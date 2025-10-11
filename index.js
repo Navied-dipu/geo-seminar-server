@@ -40,6 +40,22 @@ async function run() {
         res.status(500).send({ error: "Failed to add book" });
       }
     });
+    // GET /books?search=GETh-2001
+    app.get("/books", async (req, res) => {
+      const search = req.query.search;
+      try {
+        let query = {};
+        if (search) {
+          const regex = new RegExp(search, "i"); // case-insensitive
+          query = { $or: [{ name: regex }, { code: regex }] };
+        }
+        const result = await booksCollection.find(query).toArray();
+        res.send(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ error: "Failed to fetch books" });
+      }
+    });
 
     // GET /books - Get all books (optional)
     app.get("/books", async (req, res) => {
