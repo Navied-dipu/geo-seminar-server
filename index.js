@@ -28,6 +28,8 @@ async function run() {
     await client.connect();
     const db = client.db("seminardb");
     const booksCollection = db.collection("booksdb");
+    const usersCollection = db.collection("usersdb");
+    const borrowBooksCollection = db.collection("borrowBooksdb");
 
     // POST /books - Add new book
     app.post("/books", async (req, res) => {
@@ -40,31 +42,93 @@ async function run() {
         res.status(500).send({ error: "Failed to add book" });
       }
     });
-    // GET /books?search=GETh-2001
-    app.get("/books", async (req, res) => {
-      const search = req.query.search;
-      try {
-        let query = {};
-        if (search) {
-          const regex = new RegExp(search, "i"); // case-insensitive
-          query = { $or: [{ name: regex }, { code: regex }] };
-        }
-        const result = await booksCollection.find(query).toArray();
-        res.send(result);
-      } catch (err) {
-        console.error(err);
-        res.status(500).send({ error: "Failed to fetch books" });
-      }
-    });
 
     // GET /books - Get all books (optional)
     app.get("/books", async (req, res) => {
+      const result = await booksCollection.find().toArray();
+      res.send(result);
+    });
+    // POST /borrow
+    app.post("/borrow", async (req, res) => {
       try {
-        const result = await booksCollection.find().toArray();
-        res.send(result);
+        const { roll, code } = req.body;
+console.log(roll)
+        const student = await usersCollection.findOne({ roll });
+        if (!student) {
+          return res.status(404).send({ message: "Roll number not found" });
+        }
+
+        const book = await booksCollection.findOne({ _id: new ObjectId(code) });
+        if (!book) {
+          return res.status(404).send({ message: "Book not found" });
+        }
+
+        // Parse copies safely
+        const copies = parseInt(book.copies?.$numberInt || book.copies || 0);
+        if (copies <= 0) {
+          return res.status(400).send({ message: "No copies available" });
+        }
+
+        // Update copies
+        await booksCollection.updateOne(
+          { _id: new ObjectId(code) },
+          { $set: { "copies.$numberInt": (copies - 1).toString() } }
+        );
+
+        await borrowBooksCollection.insertOne({
+          roll,
+          code,
+          bookName: book.name,
+          author: book.author,
+          borrowedAt: new Date(),
+        });
+
+        res.send({ message: "Book borrowed successfully", success: true });
       } catch (err) {
         console.error(err);
-        res.status(500).send({ error: "Failed to fetch books" });
+        res.status(500).send({ message: "Server error" });
+      }
+    });
+
+    // users
+    app.get("/users", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+    //
+    app.get("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      try {
+        const user = await usersCollection.findOne({ email });
+        if (!user) {
+          return res.status(404).send({ message: "User not found" });
+        }
+        res.send(user);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ message: "Failed to fetch user" });
+      }
+    });
+
+    app.post("/users", async (req, res) => {
+      try {
+        const user = req.body;
+        const existingUser = await usersCollection.findOne({
+          email: user.email,
+        });
+
+        if (existingUser) {
+          return res.status(200).send({ message: "User already exists" });
+        }
+
+        const result = await usersCollection.insertOne(user);
+        res.send({
+          message: "User saved successfully",
+          inserted: true,
+          result,
+        });
+      } catch (error) {
+        res.status(500).send({ error: error.message });
       }
     });
 
