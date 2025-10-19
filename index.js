@@ -1,7 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 dotenv.config();
 const PORT = process.env.PORT || 5000;
@@ -49,53 +49,68 @@ async function run() {
       res.send(result);
     });
     // POST /borrow
-    app.post("/borrow", async (req, res) => {
-      try {
-        const { roll, code } = req.body;
-console.log(roll)
-        const student = await usersCollection.findOne({ roll });
-        if (!student) {
-          return res.status(404).send({ message: "Roll number not found" });
-        }
-
-        const book = await booksCollection.findOne({ _id: new ObjectId(code) });
-        if (!book) {
-          return res.status(404).send({ message: "Book not found" });
-        }
-
-        // Parse copies safely
-        const copies = parseInt(book.copies?.$numberInt || book.copies || 0);
-        if (copies <= 0) {
-          return res.status(400).send({ message: "No copies available" });
-        }
-
-        // Update copies
-        await booksCollection.updateOne(
-          { _id: new ObjectId(code) },
-          { $set: { "copies.$numberInt": (copies - 1).toString() } }
-        );
-
-        await borrowBooksCollection.insertOne({
-          roll,
-          code,
-          bookName: book.name,
-          author: book.author,
-          borrowedAt: new Date(),
-        });
-
-        res.send({ message: "Book borrowed successfully", success: true });
-      } catch (err) {
-        console.error(err);
-        res.status(500).send({ message: "Server error" });
+    app.post("/borrows", async (req, res) => {
+      const { roll, bookId } = req.body;
+      const user = await usersCollection.findOne({ roll });
+      const book = await booksCollection.findOne({ _id: new ObjectId(bookId) });
+      if (book.copies <= 0) {
+        return res.status(400).send({ message: "No copies available" });
       }
+      if (!user) {
+        return res.status(400).send({ message: "User roll not found" });
+      }
+      const borrowDoc = {
+        roll,
+        email:user.email,
+        userId: user._id,
+        bookId: book._id,
+        bookName: book.name,
+        bookCode: book.code,
+        author: book.author,
+        borrowDate: new Date(),
+        returned: false, // to track if returned
+      };
+      const result = await borrowBooksCollection.insertOne(borrowDoc);
+      await booksCollection.updateOne(
+        { _id: book._id },
+        { $inc: { copies: -1 } }
+      );
+      res.send(result);
     });
+
+    app.get("/borrows", async (req, res) => {
+      const result = await borrowBooksCollection.find().toArray();
+      res.send(result);
+    });
+    // ✅ Get borrow list for a specific user
+    // ✅ Fixed /borrows route
+    app.get("/borrows", async (req, res) => {
+      const email = req.query.email; 
+      if (!email) {
+        return res.status(400).send({ message: "Email is required" });
+      }
+      const user = await usersCollection.findOne({ email: email });
+      if (!user) {
+        return res.status(404).send({ message: "User not found" });
+      }
+      const borrowedBooks = await borrowBooksCollection
+        .find({ userId: new ObjectId(user._id) })
+        .toArray();
+      res.send(borrowedBooks);
+    });
+
 
     // users
     app.get("/users", async (req, res) => {
-      const result = await usersCollection.find().toArray();
-      res.send(result);
+      const { email } = req.query;
+      if (email) {
+        const user = await usersCollection.findOne({ email });
+        return res.send(user || {});
+      }
+      const users = await usersCollection.find().toArray();
+      res.send(users);
     });
-    //
+
     app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
       try {
