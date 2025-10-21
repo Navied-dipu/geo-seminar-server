@@ -61,7 +61,7 @@ async function run() {
       }
       const borrowDoc = {
         roll,
-        email:user.email,
+        email: user.email,
         userId: user._id,
         bookId: book._id,
         bookName: book.name,
@@ -78,14 +78,57 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/borrows", async (req, res) => {
+    app.get("/borrowsall", async (req, res) => {
       const result = await borrowBooksCollection.find().toArray();
       res.send(result);
     });
-    // ✅ Get borrow list for a specific user
-    // ✅ Fixed /borrows route
+    // ✅ Return a borrowed book
+    app.patch("/borrows/return/:id", async (req, res) => {
+      try {
+        const borrowId = req.params.id;
+
+        // Find the borrowed record
+        const borrowRecord = await borrowBooksCollection.findOne({
+          _id: new ObjectId(borrowId),
+        });
+
+        if (!borrowRecord) {
+          return res.status(404).send({ message: "Borrow record not found" });
+        }
+
+        if (borrowRecord.returned) {
+          return res.status(400).send({ message: "Book already returned" });
+        }
+
+        // Update borrow record → returned: true
+        await borrowBooksCollection.updateOne(
+          { _id: new ObjectId(borrowId) },
+          {
+            $set: {
+              returned: true,
+              returnDate: new Date(),
+            },
+          }
+        );
+
+        // Increase the book's available copies by +1
+        await booksCollection.updateOne(
+          { _id: new ObjectId(borrowRecord.bookId) },
+          { $inc: { copies: 1 } }
+        );
+
+        res.send({
+          message: "Book returned successfully",
+          returned: true,
+        });
+      } catch (error) {
+        console.error("Error updating return:", error);
+        res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
+
     app.get("/borrows", async (req, res) => {
-      const email = req.query.email; 
+      const email = req.query.email;
       if (!email) {
         return res.status(400).send({ message: "Email is required" });
       }
@@ -96,9 +139,9 @@ async function run() {
       const borrowedBooks = await borrowBooksCollection
         .find({ userId: new ObjectId(user._id) })
         .toArray();
+
       res.send(borrowedBooks);
     });
-
 
     // users
     app.get("/users", async (req, res) => {
