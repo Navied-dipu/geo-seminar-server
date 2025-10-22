@@ -48,6 +48,38 @@ async function run() {
       const result = await booksCollection.find().toArray();
       res.send(result);
     });
+    app.get("/books/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const book = await booksCollection.findOne({ _id: new ObjectId(id) });
+        if (!book) {
+          return res.status(404).send({ message: "Book not found" });
+        }
+        res.send(book);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
+
+    // PATCH - Update book
+    app.patch("/books/:id", async (req, res) => {
+      const id = req.params.id;
+      const updated = req.body;
+      const result = await booksCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updated }
+      );
+      res.send(result);
+    });
+
+    // DELETE - Delete book
+    app.delete("/books/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await booksCollection.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
+
     // POST /borrow
     app.post("/borrows", async (req, res) => {
       const { roll, bookId } = req.body;
