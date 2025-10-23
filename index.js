@@ -235,6 +235,8 @@ app.get("/", (req, res) => {
   res.send("Server with CORS is running 🚀");
 });
 
+module.exports = app;
+
 // Start server
 // app.listen(PORT, () => {
 //   console.log(`✅ Server running on port ${PORT}`);
