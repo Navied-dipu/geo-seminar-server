@@ -9,7 +9,16 @@ const PORT = process.env.PORT || 5000;
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://geo-seminar-client-qu2h.vercel.app",
+    ],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 // MongoDB Connection
@@ -238,6 +247,6 @@ app.get("/", (req, res) => {
 module.exports = app;
 
 // Start server
-// app.listen(PORT, () => {
-//   console.log(`✅ Server running on port ${PORT}`);
-// });
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+});
