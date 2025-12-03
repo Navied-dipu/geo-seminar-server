@@ -13,7 +13,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://geo-seminar-client-qu2h.vercel.app",
+      "https://geo-seminar-client.vercel.app",
     ],
     credentials: true,
   })
