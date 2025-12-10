@@ -11,13 +11,10 @@ const app = express();
 // Middleware
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://geo-seminar-client.vercel.app",
-    ],
+    origin: ["http://localhost:5173", "https://geo-seminar-client.vercel.app"],
     credentials: true,
-  }));
-
+  })
+);
 
 app.use(express.json());
 
@@ -33,13 +30,12 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
+    client.connect();
     const db = client.db("seminardb");
     const booksCollection = db.collection("booksdb");
     const usersCollection = db.collection("usersdb");
     const borrowBooksCollection = db.collection("borrowBooksdb");
 
-   
     app.post("/books", async (req, res) => {
       try {
         const newBook = req.body;
@@ -69,7 +65,6 @@ async function run() {
       }
     });
 
-    
     app.patch("/books/:id", async (req, res) => {
       const id = req.params.id;
       const updated = req.body;
@@ -106,7 +101,7 @@ async function run() {
         bookCode: book.code,
         author: book.author,
         borrowDate: new Date(),
-        returned: false, 
+        returned: false,
       };
       const result = await borrowBooksCollection.insertOne(borrowDoc);
       await booksCollection.updateOne(
@@ -183,7 +178,7 @@ async function run() {
 
     // users
     app.get("/users", async (req, res) => {
-      const {email} = req.query;
+      const { email } = req.query;
       if (email) {
         const user = await usersCollection.findOne({ email });
         return res.send(user || {});
