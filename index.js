@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 5000;
 const app = express();
 
 // Middleware
-app.use(
+app.use()
   cors({
     origin: [
       "http://localhost:5173",
@@ -17,11 +17,10 @@ app.use(
     ],
     credentials: true,
   })
-);
+
 
 app.use(express.json());
 
-// MongoDB Connection
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.2z2tafq.mongodb.net/?retryWrites=true&w=majority`;
 
 const client = new MongoClient(uri, {
@@ -40,7 +39,7 @@ async function run() {
     const usersCollection = db.collection("usersdb");
     const borrowBooksCollection = db.collection("borrowBooksdb");
 
-    // POST /books - Add new book
+   
     app.post("/books", async (req, res) => {
       try {
         const newBook = req.body;
@@ -52,7 +51,6 @@ async function run() {
       }
     });
 
-    // GET /books - Get all books (optional)
     app.get("/books", async (req, res) => {
       const result = await booksCollection.find().toArray();
       res.send(result);
@@ -71,7 +69,7 @@ async function run() {
       }
     });
 
-    // PATCH - Update book
+    
     app.patch("/books/:id", async (req, res) => {
       const id = req.params.id;
       const updated = req.body;
@@ -82,7 +80,6 @@ async function run() {
       res.send(result);
     });
 
-    // DELETE - Delete book
     app.delete("/books/:id", async (req, res) => {
       const id = req.params.id;
       const result = await booksCollection.deleteOne({ _id: new ObjectId(id) });
@@ -109,7 +106,7 @@ async function run() {
         bookCode: book.code,
         author: book.author,
         borrowDate: new Date(),
-        returned: false, // to track if returned
+        returned: false, 
       };
       const result = await borrowBooksCollection.insertOne(borrowDoc);
       await booksCollection.updateOne(
@@ -123,7 +120,7 @@ async function run() {
       const result = await borrowBooksCollection.find().toArray();
       res.send(result);
     });
-    // ✅ Return a borrowed book
+    //  Return a borrowed book
     app.patch("/borrows/return/:id", async (req, res) => {
       try {
         const borrowId = req.params.id;
@@ -186,7 +183,7 @@ async function run() {
 
     // users
     app.get("/users", async (req, res) => {
-      const { email } = req.query;
+      const {email} = req.query;
       if (email) {
         const user = await usersCollection.findOne({ email });
         return res.send(user || {});
