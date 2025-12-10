@@ -241,9 +241,12 @@ app.get("/", (req, res) => {
   res.send("Server with CORS is running 🚀");
 });
 
+// Export only, no app.listen() for Vercel
 module.exports = app;
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
+// For local development only (optional)
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => {
+    console.log(` Server running on port ${PORT}`);
+  });
+}
