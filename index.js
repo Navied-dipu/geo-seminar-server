@@ -9,14 +9,14 @@ const PORT = process.env.PORT || 5000;
 const app = express();
 
 // Middleware
-app.use()
+app.use(
   cors({
     origin: [
       "http://localhost:5173",
       "https://geo-seminar-client.vercel.app",
     ],
     credentials: true,
-  })
+  }));
 
 
 app.use(express.json());
